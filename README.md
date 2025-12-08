@@ -18,5 +18,7 @@ Run a pragmatic privacy & security audit on the current note using the OpenAI AP
 
 ```bash
 npm install
-npm run dev
+npm run build
 ```
+
+The above commands will generate a new `main.js` file after any changes. You can then update the plugin folder with this file and reload the plugin in Obsidian.
