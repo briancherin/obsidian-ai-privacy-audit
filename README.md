@@ -27,7 +27,7 @@ The above commands will generate a new `main.js` file after any changes. You can
 
 Below are example screenshots showing the plugin running inside Obsidian.
 
-### Running the Audit from the Command Palette**
+### Running the Audit from the Command Palette
 ![Command Palette Example](assets/dontspearphishme-command-palette.png)
 
 ---
