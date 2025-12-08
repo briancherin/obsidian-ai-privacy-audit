@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "CommonJS",
+    "lib": ["DOM", "ES2018"],
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    "strict": true,
+    "noEmitOnError": false,
+
+    "outDir": ".",
+    "rootDir": ".",
+
+    "types": ["obsidian"]
+  },
+  "include": ["./main.ts"],
+  "exclude": ["node_modules"]
+}

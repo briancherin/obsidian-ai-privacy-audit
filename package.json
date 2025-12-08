@@ -1,0 +1,14 @@
+{
+  "name": "obsidian-ai-privacy-audit",
+  "version": "0.1.0",
+  "description": "Privacy & security audit plugin for Obsidian using OpenAI.",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc -noEmit false --outDir .",
+    "dev": "tsc --watch -noEmit false --outDir ."
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "obsidian": "latest"
+  }
+}

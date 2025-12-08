@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-ai-privacy-audit",
+  "name": "AI Privacy Audit",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Run a privacy & security check on the current note using OpenAI.",
+  "author": "Brian Cherin",
+  "authorUrl": "https://briancherin.github.io",
+  "isDesktopOnly": false
+}
