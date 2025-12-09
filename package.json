@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-ai-privacy-audit",
+  "name": "ai-privacy-audit",
   "version": "0.1.0",
   "description": "Privacy & security audit plugin for Obsidian using OpenAI.",
   "main": "main.js",
