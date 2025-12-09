@@ -8,7 +8,9 @@
     "dev": "tsc --watch -noEmit false --outDir ."
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "obsidian": "latest"
+    "eslint": "^9.39.1",
+    "eslint-plugin-obsidianmd": "^0.1.9",
+    "obsidian": "latest",
+    "typescript": "^5.3.3"
   }
 }

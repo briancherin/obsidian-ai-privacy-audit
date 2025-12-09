@@ -67,19 +67,21 @@ class PrivacyAuditPlugin extends obsidian_1.Plugin {
         await this.loadSettings();
         this.addSettingTab(new PrivacyAuditSettingTab(this.app, this));
         this.addCommand({
-            id: "run-privacy-audit",
-            name: "Run privacy/security audit on current note",
-            editorCallback: async (editor, ctx) => {
-                await this.runAudit(editor);
+            id: "run-audit",
+            name: "Run privacy and security audit on current note",
+            // Expectation is a void callback, so intentionally ignore the promise
+            editorCallback: (editor, _ctx) => {
+                void this.runAudit(editor);
             },
         });
         this.registerView(PRIVACY_AUDIT_VIEW, (leaf) => new PrivacyAuditView(leaf));
     }
-    async onunload() {
+    onunload() {
         // nothing special
     }
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const stored = (await this.loadData());
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, stored !== null && stored !== void 0 ? stored : {});
     }
     async saveSettings() {
         await this.saveData(this.settings);
@@ -87,23 +89,26 @@ class PrivacyAuditPlugin extends obsidian_1.Plugin {
     async runAudit(editor) {
         const apiKey = this.settings.openaiApiKey.trim();
         if (!apiKey) {
-            new obsidian_1.Notice("Privacy Audit: Please set your OpenAI API key in the plugin settings.");
+            new obsidian_1.Notice("Privacy audit: please set your OpenAI API key in the plugin settings.");
             return;
         }
         const content = editor.getValue();
         if (!content || content.trim().length === 0) {
-            new obsidian_1.Notice("Privacy Audit: Current note is empty.");
+            new obsidian_1.Notice("Privacy audit: current note is empty.");
             return;
         }
-        new obsidian_1.Notice("Privacy Audit: Running audit…");
+        new obsidian_1.Notice("Privacy audit: running audit…");
         try {
             const responseText = await this.callOpenAI(apiKey, content);
             await this.showAuditInSidebar(responseText);
-            new obsidian_1.Notice("Privacy Audit: Results written to side panel.");
+            new obsidian_1.Notice("Privacy audit: results written to side panel.");
         }
         catch (err) {
-            console.error("Privacy Audit error:", err);
-            new obsidian_1.Notice("Privacy Audit: Failed to get response from OpenAI (see console for details).");
+            let msg = "Privacy audit: failed to get response from OpenAI.";
+            if (err instanceof Error && err.message) {
+                msg += ` ${err.message}`;
+            }
+            new obsidian_1.Notice(msg);
         }
     }
     async callOpenAI(apiKey, noteContent) {
@@ -111,11 +116,12 @@ class PrivacyAuditPlugin extends obsidian_1.Plugin {
         const model = this.settings.model || "gpt-4.1-mini";
         const systemPrompt = this.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
         const maxTokens = this.settings.maxTokens || 900;
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        const response = await (0, obsidian_1.requestUrl)({
+            url: "https://api.openai.com/v1/chat/completions",
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`,
+                Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
                 model,
@@ -123,41 +129,39 @@ class PrivacyAuditPlugin extends obsidian_1.Plugin {
                     { role: "system", content: systemPrompt },
                     {
                         role: "user",
-                        content: `Here is the full text of my note. Please perform the privacy & security audit described:\n\n${noteContent}`,
+                        content: `Here is the full text of my note. Please perform the privacy and security audit described:\n\n${noteContent}`,
                     },
                 ],
                 temperature: 0.1,
                 max_tokens: maxTokens,
             }),
         });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`OpenAI API error: ${res.status} ${res.statusText} - ${text}`);
+        if (response.status < 200 || response.status >= 300) {
+            throw new Error(`OpenAI API error: ${response.status} - ${response.text}`);
         }
-        const data = await res.json();
-        const message = (_c = (_b = (_a = data.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content;
+        const parsed = JSON.parse(response.text);
+        const message = (_c = (_b = (_a = parsed.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content;
         if (!message) {
             throw new Error("OpenAI API returned no message content.");
         }
         return message;
     }
     async showAuditInSidebar(auditText) {
-        var leaf;
-        // Try to find an existing audit leaf
-        leaf = this.app.workspace.getLeavesOfType(PRIVACY_AUDIT_VIEW)[0];
+        let leaf = this.app.workspace.getLeavesOfType(PRIVACY_AUDIT_VIEW)[0];
         // If no leaf exists, create one in the right sidebar
         if (!leaf) {
-            leaf = this.app.workspace.getRightLeaf(false);
-            if (!leaf) {
-                console.error("Could not find leaf to show privacy audit.");
+            const created = this.app.workspace.getRightLeaf(false);
+            if (!created) {
+                new obsidian_1.Notice("Privacy audit: could not open the side panel for results.");
+                return;
             }
-            await (leaf === null || leaf === void 0 ? void 0 : leaf.setViewState({
+            await created.setViewState({
                 type: PRIVACY_AUDIT_VIEW,
-                active: true
-            }));
+                active: true,
+            });
+            leaf = created; // now safe because it's guaranteed non-null
         }
-        // Get the view and update its contents
-        const view = leaf === null || leaf === void 0 ? void 0 : leaf.view;
+        const view = leaf.view;
         view.setContent(auditText);
     }
 }
@@ -170,7 +174,6 @@ class PrivacyAuditSettingTab extends obsidian_1.PluginSettingTab {
     display() {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl("h2", { text: "Privacy Audit (OpenAI) Settings" });
         new obsidian_1.Setting(containerEl)
             .setName("OpenAI API key")
             .setDesc("Stored locally in this vault's plugin data. Treat this vault as sensitive.")
@@ -183,7 +186,7 @@ class PrivacyAuditSettingTab extends obsidian_1.PluginSettingTab {
         }));
         new obsidian_1.Setting(containerEl)
             .setName("Model")
-            .setDesc("OpenAI model name (e.g., gpt-4.1-mini, gpt-4.1, o4-mini, etc.)")
+            .setDesc("OpenAI model name (for example: gpt-4.1-mini, gpt-4.1, o4-mini)")
             .addText((text) => text
             .setPlaceholder("gpt-4.1-mini")
             .setValue(this.plugin.settings.model)
@@ -224,18 +227,16 @@ class PrivacyAuditView extends obsidian_1.ItemView {
         return PRIVACY_AUDIT_VIEW;
     }
     getDisplayText() {
-        return "Privacy Audit";
+        return "Privacy audit";
     }
     getIcon() {
-        return "shield-half"; // any Lucide icon name
+        return "shield-half";
     }
-    async setContent(markdown) {
+    setContent(markdown) {
         // Obsidian's view container: children[0] = header, children[1] = main content
         const container = this.containerEl.children[1];
         container.empty();
-        const pre = container.createEl("pre");
-        pre.style.whiteSpace = "pre-wrap";
-        pre.style.wordBreak = "break-word";
+        const pre = container.createEl("pre", { cls: "privacy-audit-output" });
         pre.textContent = markdown;
     }
 }
